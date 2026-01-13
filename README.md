@@ -4,7 +4,7 @@ A generic, publication-ready Multi-Agent Reinforcement Learning framework. Decou
 
 ## Installation
 
-```powershell
+```bash
 uv sync --extra dev
 ```
 
