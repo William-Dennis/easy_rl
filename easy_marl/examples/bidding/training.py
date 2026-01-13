@@ -273,7 +273,6 @@ def evaluate_agents(
     episode_profits = np.zeros((num_episodes, N))
     episode_quantities = np.zeros((num_episodes, N))
     market_prices = []
-    all_outputs = []
 
     for ep in range(num_episodes):
         # Create evaluation environment with all agents frozen
@@ -845,7 +844,7 @@ def parallel_train(
 def auto_train(
     N: int = 5,
     num_rounds: int = 3,
-    timesteps_per_agent: int = 24*4,
+    timesteps_per_agent: int = 24 * 4,
     seed: int = 42,
     save_dir: str = "outputs",
     verbose: bool = True,

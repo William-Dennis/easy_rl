@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from easy_marl.src.agents import PPOAgent
+from easy_marl.src.core.agents import PPOAgent
 from easy_marl.src.environment import MARLElectricityMarketEnv
 from easy_marl.examples.bidding.training import set_all_seeds, train_single_agent_worker
 
@@ -42,7 +42,11 @@ def create_test_agents(observer_name="simple"):
     agents = []
     for i in range(N_AGENTS):
         env = MARLElectricityMarketEnv(
-            agents=[], params=TEST_PARAMS, seed=SEED, agent_index=i, observer_name=observer_name
+            agents=[],
+            params=TEST_PARAMS,
+            seed=SEED,
+            agent_index=i,
+            observer_name=observer_name,
         )
         agents.append(PPOAgent(env=env, seed=SEED + i, **TEST_PPO_PARAMS))
     return agents
@@ -75,7 +79,11 @@ class TestTrainingEquivalence:
 
             set_all_seeds(SEED + i)
             env = MARLElectricityMarketEnv(
-                agents=agents_seq, params=TEST_PARAMS, seed=SEED + i, agent_index=i, observer_name="simple"
+                agents=agents_seq,
+                params=TEST_PARAMS,
+                seed=SEED + i,
+                agent_index=i,
+                observer_name="simple",
             )
             agents_seq[i].model.set_env(env)
             agents_seq[i].train(total_timesteps=TIMESTEPS)

@@ -93,7 +93,7 @@ def read_plant_data():
     try:
         _read_plant_data()
         raise ImportError("Feature not created yet")
-    except:
+    except Exception:
         plant_data = example_plant_data()
 
     return plant_data
@@ -103,7 +103,7 @@ def read_demand_profile():
     try:
         _read_demand_profile()
         raise ImportError("Feature not created yet")
-    except:
+    except Exception:
         demand_profile = example_demand_profile()
 
     demand_profile = np.asarray(demand_profile)
