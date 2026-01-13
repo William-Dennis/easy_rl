@@ -29,9 +29,7 @@ class SimpleCoordinationEnv(BaseMARLEnv):
         return self._n_agents
 
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
-        if seed is not None:
-            self.np_random, _ = gym.utils.seeding.np_random(seed)
+        super().reset(seed=seed, options=options)
         return [self.observation_space.sample() for _ in range(self.n_agents)], {}
 
     def step(self, actions):
