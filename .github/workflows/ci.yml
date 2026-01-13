@@ -29,5 +29,4 @@ jobs:
       run: uv run ty check || true 
 
     - name: Run Tests
-      # Example tests will be validated later
-      run: uv run pytest --ignore=tests/unit_tests/test_bidding
+      run: uv run pytest
