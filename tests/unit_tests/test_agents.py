@@ -75,7 +75,9 @@ class TestFixedActionFunction:
 
         assert np.allclose(action_before, action_after)
 
-    @pytest.mark.skip(reason="Known issue: PPOAgent.fixed_act_function is not truly frozen")
+    @pytest.mark.skip(
+        reason="Known issue: PPOAgent.fixed_act_function is not truly frozen"
+    )
     @pytest.mark.parametrize("obs", example_obs)
     def test_that_ppo_agent_is_not_affected_by_model_changes(self, obs):
         agent = PPOAgent(MOCK_ENV)
