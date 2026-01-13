@@ -28,6 +28,9 @@ easy_marl/
 │   │       ├── market_env.py   # MARLElectricityMarketEnv
 │   │       ├── market_logic.py # Performance critical logic (was in examples)
 │   │       └── observators.py  # specific feature engineering
+│   │   └── snake/          # [NEW] Discrete Tron/Snake Game
+│   │       ├── __init__.py
+│   │       └── snake_env.py
 │   └── utils/
 │       └── serialization.py # Helper for agent saving/loading
 ├── examples/

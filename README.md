@@ -1,69 +1,60 @@
-# Agentic Uplift
+# Easy MARL
 
-Multi-agent reinforcement learning (MARL) framework with an electricity market example. Includes PPO-based agents, Gymnasium-compatible environments, and reproducible sequential/parallel training.
+A generic, publication-ready Multi-Agent Reinforcement Learning framework. Decouples core logic from environments, supporting both continuous and discrete action spaces.
 
-## Install
-
-Requires Python 3.11+ and `uv`.
+## Installation
 
 ```powershell
 uv sync --extra dev
 ```
 
-Editable install is set up automatically from `pyproject.toml`.
+## Quick Start
+
+Train agents using the high-level API. The framework supports both **Simultaneous Best Response (SBR)** and **Iterated Best Response (IBR)**.
+
+```python
+from easy_marl.core.training import parallel_train, sequential_train
+from easy_marl.envs.electricity import ElectricityMarketEnv
+from easy_marl.envs.snake import MultiSnakeEnv
+
+# Example 1: Electricity Market (Continuous Action Space)
+# Train 5 agents to bid in a day-ahead market
+agents, stats = parallel_train(
+    env_class=ElectricityMarketEnv,
+    env_kwargs={"n_generators": 5},
+    num_rounds=10,
+    timesteps_per_agent=10_000,
+    update_schedule="SBR"  # Simultaneous Best Response (Jacobi)
+)
+
+# Example 2: N-Player Snake / Tron (Discrete Action Space)
+# Train 4 snakes to survive and box opponents in
+agents, stats = sequential_train(
+    env_class=MultiSnakeEnv,
+    env_kwargs={"n_snakes": 4, "grid_size": 20},
+    num_rounds=50,
+    timesteps_per_agent=50_000,
+    update_schedule="IBR"  # Iterated Best Response (Gauss-Seidel)
+)
+```
+
+## Key Concepts
+
+- **Core (`easy_marl.core`)**: Contains environment-agnostic `PPOAgent` and training loops.
+- **Environments (`easy_marl.envs`)**:
+  - `electricity`: Continuous bidding market.
+  - `snake`: Discrete multi-agent Tron game.
+- **Training Regimes**:
+  - **SBR (Parallel)**: Agents train against frozen snapshots of opponents (stable in adversarial).
+  - **IBR (Sequential)**: Agents train against live opponents (fast in potential games).
 
 ## Project Layout
 
 ```
 easy_marl/
-  src/                    # Core MARL framework
-    agents.py             # Base + PPO agents
-    environment.py        # Gymnasium-compatible MARL env
-    observators.py        # Observation builders
-  examples/
-    bidding/              # Electricity market example
-      market.py           # Market clearing + utils
-      training.py         # Sequential/parallel training
-tests/                    # Unit tests
-outputs/                  # Training/eval artifacts (ignored)
-main.py                   # Simple entry point
-pyproject.toml            # Build + deps
+  src/
+    core/               # Generic MARL Logic
+    envs/
+      electricity/      # Continuous Market Domain
+      snake/            # Discrete Generic Domain
 ```
-
-## Quickstart
-
-Run the default training:
-
-```powershell
-uv run python main.py
-```
-
-Use the bidding example training directly:
-
-```powershell
-uv run python -c "from easy_marl.examples.bidding.training import parallel_train; parallel_train(N=3, num_rounds=1, timesteps_per_agent=48)"
-```
-
-## Tests
-
-```powershell
-uv run pytest -q
-```
-
-## Key Concepts
-
-- MARL environment returns agent-specific observations built via observers.
-- Two training regimes:
-  - Sequential (Iterated Best Response / IBR)
-  - Parallel (Simultaneous Best Response / SBR)
-- Reproducibility via explicit seeding (NumPy/Torch/processes).
-
-## Development Notes
-
-- Package installs as `easy_marl` (editable).
-- Example code lives under `easy_marl/examples/bidding` to keep core MARL generic.
-- Outputs are written to `outputs/` and excluded from packaging.
-
-## License
-
-Choose and add a license (e.g., MIT or Apache-2.0) before public release.
