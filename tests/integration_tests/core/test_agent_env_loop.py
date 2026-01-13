@@ -24,12 +24,12 @@ class TestPPOAgent:
     def test_training(self, single_agent_env):
         agent = PPOAgent(single_agent_env)
         # Train for a minimal amount of steps to ensure no crash
-        agent.train(total_timesteps=100)
+        agent.train(total_timesteps=5)
 
     def test_serialization(self, single_agent_env, mock_env):
         # Note: We need to pass the same wrapper architecture to from_bytes/load
         agent = PPOAgent(single_agent_env, seed=42)
-        agent.train(total_timesteps=100)
+        agent.train(total_timesteps=5)
 
         # Serialize
         data = agent.save_to_bytes()

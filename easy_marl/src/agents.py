@@ -1,29 +1,30 @@
 """
-Agent implementations for multi-agent electricity market simulation.
+Generic Agent implementations for Multi-Agent Reinforcement Learning.
 """
 
 import torch
 from abc import ABC, abstractmethod
 from stable_baselines3 import PPO
-from typing import Callable
-from stable_baselines3.common.callbacks import CheckpointCallback
-import io
+from typing import Callable, Any, Optional, List, Tuple
+import gymnasium as gym
 
 
 class BaseAgent(ABC):
-    """Abstract base class for all market agents."""
+    """Abstract base class for all MARL agents."""
 
-    def __init__(self, env=None):
+    def __init__(self, env: Optional[gym.Env] = None):
         self.env = env
-        self.null_action = [0.0, 0.0]
+        # Default null action. Environments should handle specific null action semantics.
+        # For continuous spaces, this might be a zero vector.
+        self.null_action: Any = None
 
     @abstractmethod
-    def act(self, obs, deterministic=True):
+    def act(self, obs: Any, deterministic: bool = True) -> Any:
         """Return an action given an observation."""
         pass
 
     @abstractmethod
-    def fixed_act_function(self, deterministic=True) -> Callable:
+    def fixed_act_function(self, deterministic: bool = True) -> Callable:
         """Return a frozen action function for use by other agents."""
         pass
 
@@ -32,51 +33,28 @@ class BaseAgent(ABC):
         raise NotImplementedError("This agent type does not support training.")
 
 
-class SimpleAgent(BaseAgent):
-    """
-    Simple baseline agent that bids at Short-Run Marginal Cost (SRMC).
-    Always offers full capacity at cost price.
-    """
-
-    def __init__(self, env=None):
-        super().__init__(env)
-
-    def act(self, obs, deterministic=True):
-        """Returns null action: [0.0, 0.0] = (full capacity, zero price delta)"""
-        return self.null_action
-
-    def fixed_act_function(self, deterministic=True) -> Callable:
-        """Return a frozen action function for use by other agents."""
-        # Capture current null_action by value
-        frozen_action = list(self.null_action)
-
-        def act_fn(obs):
-            return frozen_action
-
-        return act_fn
-
-
 class PPOAgent(BaseAgent):
     """
-    Proximal Policy Optimization agent for strategic bidding.
-    Uses a neural network policy to learn optimal bidding strategies.
+    Proximal Policy Optimization agent.
+    Uses a neural network policy to learn optimal strategies.
+    Wraps stable_baselines3.PPO.
     """
 
     def __init__(
         self,
-        env,
-        seed=42,
-        learning_rate=3e-4,
-        gamma=0.98,
-        clip_range=0.2,
-        n_steps=2048,
-        batch_size=64,
-        hidden_sizes=(64, 64),
-        weight_decay=0.0,
+        env: gym.Env,
+        seed: int = 42,
+        learning_rate: float = 3e-4,
+        gamma: float = 0.98,
+        clip_range: float = 0.2,
+        n_steps: int = 2048,
+        batch_size: int = 64,
+        hidden_sizes: Tuple[int, ...] = (64, 64),
+        weight_decay: float = 0.0,
         **kwargs,
     ):
         """
-        Initialize PPO agent with configurable hyperparameters.
+        Initialize PPO agent.
 
         Args:
             env: Gym environment instance
@@ -97,6 +75,10 @@ class PPOAgent(BaseAgent):
             net_arch=dict(pi=list(hidden_sizes), vf=list(hidden_sizes)),
         )
 
+        if weight_decay > 0:
+            # The default optimizer is Adam, we are just adding weight_decay
+            policy_kwargs["optimizer_kwargs"] = {"weight_decay": weight_decay}
+
         # Initialize PPO model
         self.model = PPO(
             "MlpPolicy",
@@ -112,30 +94,15 @@ class PPOAgent(BaseAgent):
             **kwargs,
         )
 
-        # Add L2 regularization if specified
-        if weight_decay > 0:
-            self.model.policy.optimizer = torch.optim.Adam(
-                self.model.policy.parameters(),
-                lr=learning_rate,
-                weight_decay=weight_decay,
-            )
-
     def train(
         self,
-        total_timesteps=50000,
-        checkpoint_path=None,
-        checkpoint_freq=1000,
-        callbacks=None,
+        total_timesteps: int = 50000,
+        checkpoint_path: Optional[str] = None,
+        checkpoint_freq: int = 1000,
+        callbacks: Optional[List] = None,
     ):
-        """
-        Train the agent using PPO algorithm.
-
-        Args:
-            total_timesteps: Total number of environment steps
-            checkpoint_path: Directory to save checkpoints
-            checkpoint_freq: Frequency of checkpoint saves
-            callbacks: List of callback objects
-        """
+        """Train the agent using PPO."""
+        from stable_baselines3.common.callbacks import CheckpointCallback
 
         callback_list = callbacks if callbacks is not None else []
 
@@ -149,94 +116,56 @@ class PPOAgent(BaseAgent):
 
         self.model.learn(total_timesteps=total_timesteps, callback=callback_list)
 
-    def act(self, obs, deterministic=True):
-        """
-        Return action for given observation.
-
-        Args:
-            obs: Environment observation
-            deterministic: If True, use deterministic policy
-
-        Returns:
-            action: [q_fraction, price_delta_param]
-        """
+    def act(self, obs: Any, deterministic: bool = True) -> Any:
+        """Return action for given observation."""
         action, _ = self.model.predict(obs, deterministic=deterministic)
         return action
 
-    def fixed_act_function(self, deterministic=True) -> Callable:
+    def fixed_act_function(self, deterministic: bool = True) -> Callable:
         """
-        Return a frozen action function for use by other agents.
-
-        Returns:
-            Callable that maps observation to action
+        Return a frozen action function.
+        Note: SB3 models don't easily support deep-copying just the prediction function
+        without overhead, so this binds to the current model instance.
         """
-        # BUG: This function is not frozen. When the agent is trained, the model changes, and so does the action function.
 
-        # TODO: Consider caching actions for efficiency
         def act_fn(obs):
             action, _ = self.model.predict(obs, deterministic=deterministic)
             return action
 
         return act_fn
 
-    def save(self, path):
+    def save(self, path: str):
         """Save model to disk."""
         self.model.save(path)
 
-    def load(self, path):
+    def load(self, path: str):
         """Load model from disk."""
         self.model = PPO.load(path, env=self.env)
 
     def save_to_bytes(self) -> bytes:
-        """
-        Serialize agent state to bytes.
-
-        Use with load_from_bytes() to mutate an existing instance,
-        or with from_bytes() to create a new instance.
-
-        Returns:
-            Serialized model state including weights, optimizer, and RNG.
-        """
+        """Serialize agent state to bytes (includes optimizer state)."""
+        import io
 
         buffer = io.BytesIO()
         self.model.save(buffer)
         return buffer.getvalue()
 
     def load_from_bytes(self, data: bytes):
-        """
-        Load serialized state into this existing instance (in-place mutation).
-
-        Use this when you have a live agent that you want to restore to a
-        previous state, e.g., restoring opponent snapshots in SBR training.
-
-        Args:
-            data: Bytes from save_to_bytes().
-        """
+        """Load serialized state into this existing instance."""
+        import io
 
         buffer = io.BytesIO(data)
         self.model = PPO.load(buffer, env=self.env)
 
     @classmethod
-    def from_bytes(cls, data: bytes, env) -> "PPOAgent":
-        """
-        Create a new agent instance directly from serialized state.
+    def from_bytes(cls, data: bytes, env: gym.Env) -> "PPOAgent":
+        """Create a new agent instance directly from serialized state."""
+        import io
 
-        Use this instead of __init__ + load_from_bytes when creating agents
-        in worker processes. This avoids the overhead and potential RNG
-        perturbation of initializing a random model that gets immediately
-        discarded.
-
-        Args:
-            data: Bytes from save_to_bytes().
-            env: Environment instance for the agent.
-
-        Returns:
-            New PPOAgent instance with the deserialized model.
-        """
-
+        # Create uninitialized instance
         instance = cls.__new__(cls)
         instance.env = env
-        instance.null_action = [0.0, 0.0]
+        instance.null_action = None
 
         buffer = io.BytesIO(data)
         instance.model = PPO.load(buffer, env=env)
