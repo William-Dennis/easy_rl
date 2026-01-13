@@ -37,7 +37,10 @@ easy_marl/
 │   └── bidding/            # Usage example
 │       ├── main.py         # Entry point
 │       └── configs.py      # Specific parameter generation
-└── tests/                  # Updated tests
+└── tests/
+│   ├── unit_tests/     # Strict unit tests (mocked dependencies)
+│   ├── integration_tests/ # Tests with component interaction (e.g. training loops)
+│   └── smoke_tests/    # Sanity checks
 ```
 
 ## Migration Phases
@@ -56,7 +59,7 @@ Focus: Build the `core` module and verify it with generic tests before moving co
    - Move `BaseAgent` and `PPOAgent` here.
    - Remove all electricity-specific references.
 
-1. **`tests/unit_tests/test_core_training.py`**
+1. **`tests/integration_tests/core/test_training.py`**
 
    - Implement a `SimpleMockEnv` (e.g., a simple coordination game).
    - Verify `sequential_train` and `parallel_train` work with this mock environment.
@@ -92,7 +95,7 @@ Focus: Re-integrate the electricity market as a sub-package `easy_marl.envs.elec
 
 ### Automated Tests
 
-1. **Core Verification**: `pytest tests/unit_tests/test_core_training.py`
+1. **Core Verification**: `pytest tests/integration_tests/core/test_training.py`
    - Must pass using only the generic mock environment.
 1. **Regression Verification**: `pytest tests/unit_tests/test_agents.py`
    - Verify PPO agents still function correctly after move.
