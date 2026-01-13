@@ -222,7 +222,6 @@ def train_single_agent_worker(
     # But the env needs THE OTHER agents to step.
 
     # Rehydrating ALL agents:
-    agents = []
     # First pass: create uninitialized shells if needed, or just create them sequentially?
     # We need to construct them so we can pass them to the env factory.
 
