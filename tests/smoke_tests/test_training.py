@@ -1,7 +1,3 @@
-"""
-Unit tests for training module.
-"""
-
 from easy_marl.src.core.agents import PPOAgent
 from easy_marl.src.core.training import sequential_train, parallel_train
 

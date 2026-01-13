@@ -6,7 +6,7 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
-from easy_marl.src.core.base_env import BaseMARLEnv
+from easy_marl.src.base_env import BaseMARLEnv
 
 
 class SimpleCoordinationEnv(BaseMARLEnv):

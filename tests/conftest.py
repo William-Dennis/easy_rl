@@ -3,7 +3,7 @@ Shared pytest fixtures for unit tests.
 """
 
 import pytest
-from easy_marl.examples.mock_env import SimpleCoordinationEnv, SingleAgentWrapper
+from easy_marl.examples.simple.env import SimpleCoordinationEnv
 
 
 @pytest.fixture

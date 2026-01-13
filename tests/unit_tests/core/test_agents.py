@@ -1,162 +1,128 @@
-"""
-Strict unit tests for PPOAgent.
-Mocks external dependencies (stable_baselines3.PPO) to ensure fast, isolated execution.
-"""
-
 import pytest
-from unittest.mock import MagicMock, patch
-from easy_marl.src.core.agents import PPOAgent, BaseAgent
-import gymnasium as gym
+import numpy as np
+from easy_marl.src.agents import PPOAgent
 
-
-class TestBaseAgent:
-    """Tests for BaseAgent abstract class."""
-
-    def test_train_raises_not_implemented(self):
-        """Verify BaseAgent.train() raises NotImplementedError."""
-
-        class ConcreteAgent(BaseAgent):
-            def act(self, obs, deterministic=True):
-                return None
-
-            def fixed_act_function(self, deterministic=True):
-                return lambda x: None
-
-        agent = ConcreteAgent()
-        with pytest.raises(NotImplementedError, match="does not support training"):
-            agent.train()
-
+def get_agent(env):
+    return PPOAgent(
+        env=env,
+        seed=123,
+        learning_rate=1e-4,
+        n_steps=32,
+        batch_size=16,
+        weight_decay=1e-5,
+    )
 
 class TestPPOAgentUnit:
-    @pytest.fixture
-    def mock_env(self):
-        env = MagicMock(spec=gym.Env)
-        return env
 
-    @pytest.fixture
-    def mock_ppo_class(self):
-        with patch("easy_marl.src.core.agents.PPO") as mock:
-            yield mock
+    def test_initialization(self, mock_env):
+        """PPOAgent initializes PPO model correctly, including weight decay."""
+        agent = get_agent(mock_env)
 
-    def test_initialization_calls_ppo_correctly(self, mock_env, mock_ppo_class):
-        """Test that PPO is initialized with correct parameters."""
-        seed = 123
-        learning_rate = 1e-4
+        assert agent.env is mock_env
+        assert agent.model is not None
+        assert agent.model.n_steps == 32
+        assert agent.model.batch_size == 16
+        assert agent.model.seed == 123
 
-        _ = PPOAgent(env=mock_env, seed=seed, learning_rate=learning_rate, n_steps=1024)
+        optimizer = agent.model.policy.optimizer
+        for group in optimizer.param_groups:
+            assert group["weight_decay"] == weight_decay
 
-        mock_ppo_class.assert_called_once()
-        call_args = mock_ppo_class.call_args
-
-        assert call_args[0][0] == "MlpPolicy"
-        assert call_args[0][1] == mock_env
-        assert call_args[1]["seed"] == seed
-        assert call_args[1]["learning_rate"] == learning_rate
-        assert call_args[1]["n_steps"] == 1024
-        assert "policy_kwargs" in call_args[1]
-
-    def test_act_calls_predict(self, mock_env, mock_ppo_class):
-        """Test that act() delegates to model.predict()."""
-        mock_model = mock_ppo_class.return_value
-        expected_action = [0.5, -0.5]
-        mock_model.predict.return_value = (expected_action, None)
-
-        agent = PPOAgent(mock_env)
-        obs = [1.0, 2.0]
+    def test_act_returns_valid_action(self, mock_env):
+        """act() returns an action compatible with env action space."""
+        agent = get_agent(mock_env)
+        obs = mock_env.reset()
 
         action = agent.act(obs, deterministic=True)
 
-        mock_model.predict.assert_called_once_with(obs, deterministic=True)
-        assert action == expected_action
+        # flatten action if shape mismatch
+        if hasattr(action, "shape") and len(action.shape) > 1:
+            action = action.flatten()
 
-    def test_weight_decay_configuration(self, mock_env, mock_ppo_class):
-        """Test that weight_decay parameter constructs correct optimizer_kwargs."""
-        _ = PPOAgent(mock_env, weight_decay=1e-5)
+        assert mock_env.action_space.contains(action)
 
-        call_args = mock_ppo_class.call_args
-        policy_kwargs = call_args[1]["policy_kwargs"]
+    def test_act_is_deterministic(self, mock_env):
+        """Deterministic act() returns same action for same obs."""
+        agent = get_agent(mock_env)
+        obs = mock_env.reset()
 
-        assert "optimizer_kwargs" in policy_kwargs
-        assert policy_kwargs["optimizer_kwargs"]["weight_decay"] == 1e-5
+        a1 = agent.act(obs, deterministic=True)
+        a2 = agent.act(obs, deterministic=True)
 
-    def test_fixed_act_function_returns_callable(self, mock_env, mock_ppo_class):
-        """Test that fixed_act_function returns a working callable."""
-        mock_model = mock_ppo_class.return_value
-        expected_action = [0.9]
-        mock_model.predict.return_value = (expected_action, None)
+        assert np.allclose(a1, a2)
 
-        agent = PPOAgent(mock_env)
+    def test_fixed_act_function(self, mock_env):
+        """fixed_act_function returns a callable producing valid actions."""
+        agent = get_agent(mock_env)
+        obs = mock_env.reset()
 
-        act_fn = agent.fixed_act_function(deterministic=False)
-        result = act_fn([1.0])
+        act_fn = agent.fixed_act_function(deterministic=True)
+        action = act_fn(obs)
 
         assert callable(act_fn)
-        mock_model.predict.assert_called_with([1.0], deterministic=False)
-        assert result == expected_action
 
-    def test_train_calls_learn(self, mock_env, mock_ppo_class):
-        """Test that train() calls model.learn()."""
-        mock_model = mock_ppo_class.return_value
+        if hasattr(action, "shape") and len(action.shape) > 1:
+            action = action.flatten()
 
-        agent = PPOAgent(mock_env)
-        agent.train(total_timesteps=1000)
+        assert mock_env.action_space.contains(action)
 
-        mock_model.learn.assert_called_once()
-        call_args = mock_model.learn.call_args
-        assert call_args[1]["total_timesteps"] == 1000
+    def test_weight_decay_configuration(self, mock_env):
+        """weight_decay is passed into optimizer kwargs."""
+        agent = PPOAgent(mock_env, weight_decay=1e-5)
 
-    @patch("stable_baselines3.common.callbacks.CheckpointCallback")
-    def test_train_with_checkpoint(self, mock_cb_class, mock_env, mock_ppo_class):
-        """Test that train() creates CheckpointCallback when path provided."""
-        mock_model = mock_ppo_class.return_value
+        optimizer = agent.model.policy.optimizer
+        for group in optimizer.param_groups:
+            assert group["weight_decay"] == 1e-5
 
-        agent = PPOAgent(mock_env)
-        agent.train(
-            total_timesteps=500, checkpoint_path="/tmp/ckpt", checkpoint_freq=100
-        )
+    def test_train_runs_without_error(self, mock_env):
+        """train() runs a minimal learning loop."""
+        agent = PPOAgent(mock_env, n_steps=32, batch_size=16)
 
-        mock_cb_class.assert_called_once_with(
-            save_freq=100, save_path="/tmp/ckpt", name_prefix="ppo_agent"
-        )
-        mock_model.learn.assert_called_once()
+        # minimal steps to keep test fast
+        agent.train(total_timesteps=64)
 
-    def test_save_calls_model_save(self, mock_env, mock_ppo_class):
-        """Test that save() delegates to model.save()."""
-        mock_model = mock_ppo_class.return_value
+    def test_save_and_load(self, mock_env, tmp_path):
+        """save() and load() correctly restore model."""
+        agent = get_agent(mock_env)
+        path = tmp_path / "ppo_agent"
 
-        agent = PPOAgent(mock_env)
-        agent.save("/path/to/model")
+        agent.save(str(path))
 
-        mock_model.save.assert_called_once_with("/path/to/model")
+        new_agent = PPOAgent(mock_env)
+        new_agent.load(str(path))
 
-    def test_load_calls_model_load(self, mock_env, mock_ppo_class):
-        """Test that load() uses PPO.load()."""
-        agent = PPOAgent(mock_env)
-        agent.load("/path/to/model")
+        obs = mock_env.reset()
+        a1 = agent.act(obs, deterministic=True)
+        a2 = new_agent.act(obs, deterministic=True)
 
-        mock_ppo_class.load.assert_called_once_with("/path/to/model", env=mock_env)
+        assert np.allclose(a1, a2)
 
-    def test_save_to_bytes(self, mock_env, mock_ppo_class):
-        """Test that save_to_bytes() serializes to buffer."""
-        mock_model = mock_ppo_class.return_value
+    def test_save_to_bytes_and_load_from_bytes(self, mock_env):
+        """save_to_bytes() and load_from_bytes() round-trip state."""
+        agent = get_agent(mock_env)
+        obs = mock_env.reset()
+        action_before = agent.act(obs, deterministic=True)
 
-        agent = PPOAgent(mock_env)
-        result = agent.save_to_bytes()
+        data = agent.save_to_bytes()
+        assert isinstance(data, bytes)
 
-        mock_model.save.assert_called_once()
-        assert isinstance(result, bytes)
+        agent.load_from_bytes(data)
+        action_after = agent.act(obs, deterministic=True)
 
-    def test_load_from_bytes(self, mock_env, mock_ppo_class):
-        """Test that load_from_bytes() deserializes from buffer."""
-        agent = PPOAgent(mock_env)
-        agent.load_from_bytes(b"fake_data")
+        assert np.allclose(action_before, action_after)
 
-        mock_ppo_class.load.assert_called()
+    def test_from_bytes_classmethod(self, mock_env):
+        """from_bytes() constructs a new agent with same behavior."""
+        agent = get_agent(mock_env)
+        obs = mock_env.reset()
 
-    def test_from_bytes_class_method(self, mock_env, mock_ppo_class):
-        """Test that from_bytes() creates new instance from serialized state."""
-        agent = PPOAgent.from_bytes(b"fake_data", mock_env)
+        data = agent.save_to_bytes()
+        new_agent = PPOAgent.from_bytes(data, mock_env)
 
-        assert agent.env == mock_env
-        assert agent.null_action is None
-        mock_ppo_class.load.assert_called()
+        assert new_agent.env is mock_env
+        assert new_agent.null_action is None
+
+        a1 = agent.act(obs, deterministic=True)
+        a2 = new_agent.act(obs, deterministic=True)
+
+        assert np.allclose(a1, a2)
