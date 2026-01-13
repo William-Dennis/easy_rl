@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 from easy_marl.src.agents import PPOAgent
 
@@ -26,7 +25,7 @@ class TestPPOAgentUnit:
 
         optimizer = agent.model.policy.optimizer
         for group in optimizer.param_groups:
-            assert group["weight_decay"] == weight_decay
+            assert group["weight_decay"] == 1e-5
 
     def test_act_returns_valid_action(self, mock_env):
         """act() returns an action compatible with env action space."""
