@@ -274,7 +274,6 @@ def evaluate_agents(
     episode_quantities = np.zeros((num_episodes, N))
     market_prices = []
 
-
     for ep in range(num_episodes):
         # Create evaluation environment with all agents frozen
         eval_env = MARLElectricityMarketEnv(
