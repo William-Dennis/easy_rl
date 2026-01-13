@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from easy_marl.src.agents import PPOAgent
+from easy_marl.src.core.agents import PPOAgent
 from easy_marl.src.environment import MARLElectricityMarketEnv
 from easy_marl.examples.bidding.training import set_all_seeds, train_single_agent_worker
 

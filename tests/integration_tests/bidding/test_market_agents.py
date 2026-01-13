@@ -1,4 +1,5 @@
-from easy_marl.src.agents import SimpleAgent, PPOAgent
+from easy_marl.src.agents import SimpleAgent
+from easy_marl.src.core.agents import PPOAgent
 from easy_marl.src.environment import MARLElectricityMarketEnv
 import pytest
 import numpy as np

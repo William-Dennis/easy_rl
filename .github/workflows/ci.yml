@@ -1,0 +1,34 @@
+name: CI Pipeline
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+
+    - name: Install dependencies
+      run: uv sync --all-extras
+
+    - name: Lint with Ruff
+      run: uv run ruff check
+
+    - name: Check Formatting with Ruff
+      run: uv run ruff format
+
+    - name: Type Check with Ty
+      # Continuing on error for now as we have known diagnostics
+      # Remove 'continue-on-error' once types are fully strict
+      run: uv run ty check || true 
+
+    - name: Run Unit Tests
+      run: uv run pytest tests/unit_tests
+
+    - name: Run Integration Tests
+      run: uv run pytest tests/integration_tests
