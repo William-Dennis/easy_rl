@@ -7,9 +7,7 @@ import torch
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from easy_marl.src.core.agents import PPOAgent
-from easy_marl.src.environment import MARLElectricityMarketEnv
-from easy_marl.examples.bidding.training import set_all_seeds, train_single_agent_worker
-
+from easy_marl.src.core.training import sequential_train
 
 # Minimal test config
 N_AGENTS = 2
@@ -41,7 +39,7 @@ def create_test_agents(observer_name="simple"):
     set_all_seeds(SEED)
     agents = []
     for i in range(N_AGENTS):
-        env = MARLElectricityMarketEnv(
+        env = mock_env(
             agents=[],
             params=TEST_PARAMS,
             seed=SEED,
