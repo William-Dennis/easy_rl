@@ -57,7 +57,7 @@ Focus: Build the `core` module and verify it with generic tests before moving co
 3. **`tests/unit_tests/test_core_training.py`**
     - Implement a `SimpleMockEnv` (e.g., a simple coordination game).
     - Verify `sequential_train` and `parallel_train` work with this mock environment.
-    - validates the core training loop is truly generic.
+    - This validates that the core training loop is truly generic.
 
 ### Phase 2: Refactoring Training Logic
 
