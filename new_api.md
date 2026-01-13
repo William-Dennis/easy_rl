@@ -68,6 +68,8 @@ Focus: Decouple the training loops from domain-specific metrics.
     - Remove `make_competitive_params` dependency (use generic env factories).
     - Generalized evaluation: Replace hardcoded `market_prices` tracking with generic reward/metric callbacks.
 
+2. **Requirement**: extensive unit tests in `tests/unit_tests/core` must achieve 100% code coverage against `src/core`.
+
 ### Phase 3: Migrating Electricity Market
 
 Focus: Re-integrate the electricity market as a sub-package `easy_marl.envs.electricity`.
