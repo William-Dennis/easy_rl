@@ -27,9 +27,7 @@ class TestPPOAgentUnit:
         learning_rate = 1e-4
 
         # Act
-        _ = PPOAgent(
-            env=mock_env, seed=seed, learning_rate=learning_rate, n_steps=1024
-        )
+        _ = PPOAgent(env=mock_env, seed=seed, learning_rate=learning_rate, n_steps=1024)
 
         # Assert
         mock_ppo_class.assert_called_once()

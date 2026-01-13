@@ -4,7 +4,7 @@ Mocks external dependencies (PPOAgent, ProcessPoolExecutor) for isolated testing
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 import random
 
 
@@ -14,13 +14,11 @@ class TestSetAllSeeds:
     def test_sets_all_seeds(self):
         """Verify all RNGs are seeded correctly."""
         from easy_marl.src.core.training import set_all_seeds
-        import torch
 
         # Just verify it runs without error - actual seeding verified by behavior
         set_all_seeds(42)
 
         # Verify determinism by checking random state is consistent
-        import random
         import numpy as np
 
         set_all_seeds(123)
@@ -37,7 +35,6 @@ class TestSetAllSeeds:
     def test_sets_cuda_seeds_when_available(self):
         """Verify CUDA branch is covered (runs without error on CPU)."""
         from easy_marl.src.core.training import set_all_seeds
-        import torch
 
         # This test just ensures the cuda branch is exercised
         # On CPU machines, torch.cuda.is_available() returns False
@@ -58,9 +55,6 @@ class TestSetAllSeeds:
 
         mock_seed.assert_called_with(42)
         mock_seed_all.assert_called_with(42)
-
-
-
 
 
 class TestTrainAgentCore:
@@ -369,7 +363,9 @@ class TestParallelTrain:
 
     @patch("easy_marl.src.core.training.ProcessPoolExecutor")
     @patch("easy_marl.src.core.training.as_completed")
-    def test_workers_capped_at_agent_count(self, mock_as_completed, mock_executor_class):
+    def test_workers_capped_at_agent_count(
+        self, mock_as_completed, mock_executor_class
+    ):
         """Verify n_workers is capped at number of agents."""
         from easy_marl.src.core.training import parallel_train
 
@@ -569,4 +565,3 @@ class TestVerboseOutputCoverage:
         # Should print inertia skip message
         calls = [str(c) for c in mock_print.call_args_list]
         assert any("Inertia" in c for c in calls)
-
