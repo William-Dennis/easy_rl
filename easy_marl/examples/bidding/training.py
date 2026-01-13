@@ -273,7 +273,7 @@ def evaluate_agents(
     episode_profits = np.zeros((num_episodes, N))
     episode_quantities = np.zeros((num_episodes, N))
     market_prices = []
-    all_outputs = []
+
 
     for ep in range(num_episodes):
         # Create evaluation environment with all agents frozen
