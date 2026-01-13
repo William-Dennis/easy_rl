@@ -75,6 +75,10 @@ class PPOAgent(BaseAgent):
             net_arch=dict(pi=list(hidden_sizes), vf=list(hidden_sizes)),
         )
 
+        if weight_decay > 0:
+            # The default optimizer is Adam, we are just adding weight_decay
+            policy_kwargs["optimizer_kwargs"] = {"weight_decay": weight_decay}
+
         # Initialize PPO model
         self.model = PPO(
             "MlpPolicy",
@@ -89,14 +93,6 @@ class PPOAgent(BaseAgent):
             policy_kwargs=policy_kwargs,
             **kwargs,
         )
-
-        # Add L2 regularization if specified
-        if weight_decay > 0:
-            self.model.policy.optimizer = torch.optim.Adam(
-                self.model.policy.parameters(),
-                lr=learning_rate,
-                weight_decay=weight_decay,
-            )
 
     def train(
         self,

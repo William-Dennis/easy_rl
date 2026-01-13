@@ -6,6 +6,8 @@ import torch
 from abc import ABC, abstractmethod
 from stable_baselines3 import PPO
 from typing import Callable
+from stable_baselines3.common.callbacks import CheckpointCallback
+import io
 
 
 class BaseAgent(ABC):
@@ -134,7 +136,6 @@ class PPOAgent(BaseAgent):
             checkpoint_freq: Frequency of checkpoint saves
             callbacks: List of callback objects
         """
-        from stable_baselines3.common.callbacks import CheckpointCallback
 
         callback_list = callbacks if callbacks is not None else []
 
@@ -196,7 +197,6 @@ class PPOAgent(BaseAgent):
         Returns:
             Serialized model state including weights, optimizer, and RNG.
         """
-        import io
 
         buffer = io.BytesIO()
         self.model.save(buffer)
@@ -212,7 +212,6 @@ class PPOAgent(BaseAgent):
         Args:
             data: Bytes from save_to_bytes().
         """
-        import io
 
         buffer = io.BytesIO(data)
         self.model = PPO.load(buffer, env=self.env)
@@ -234,7 +233,6 @@ class PPOAgent(BaseAgent):
         Returns:
             New PPOAgent instance with the deserialized model.
         """
-        import io
 
         instance = cls.__new__(cls)
         instance.env = env

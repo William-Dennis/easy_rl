@@ -53,3 +53,16 @@ class TestPPOAgent:
         obs = single_agent_env.observation_space.sample()
         action = act_fn(obs)
         assert action.shape == single_agent_env.action_space.shape
+
+    def test_weight_decay_configuration(self, single_agent_env):
+        weight_decay = 1e-4
+        agent = PPOAgent(single_agent_env, weight_decay=weight_decay)
+
+        # Check if the optimizer has the correct weight_decay
+        # SB3 creates the optimizer inside model.policy
+        optimizer = agent.model.policy.optimizer
+        assert optimizer is not None
+
+        # Check all param groups (usually just one)
+        for param_group in optimizer.param_groups:
+            assert param_group["weight_decay"] == weight_decay
