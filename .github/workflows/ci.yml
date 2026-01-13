@@ -27,5 +27,8 @@ jobs:
       # Remove 'continue-on-error' once types are fully strict
       run: uv run ty check || true 
 
-    - name: Run Tests
+    - name: Run Unit Tests
       run: uv run pytest tests/unit_tests
+
+    - name: Run Integration Tests
+      run: uv run pytest tests/integration_tests
