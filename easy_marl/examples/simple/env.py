@@ -52,25 +52,3 @@ class SimpleCoordinationEnv(BaseMARLEnv):
 
     def render(self):
         pass
-
-
-class SingleAgentWrapper(gym.Env):
-    """
-    Wraps a BaseMARLEnv to look like a single-agent environment for one specific agent.
-    """
-
-    def __init__(self, env: BaseMARLEnv, agent_index: int):
-        self.env = env
-        self.agent_index = agent_index
-        self.observation_space = env.observation_space
-        self.action_space = env.action_space
-
-    def reset(self, seed=None, options=None):
-        obs_list, info = self.env.reset(seed=seed, options=options)
-        return obs_list[self.agent_index], info
-
-    def step(self, action):
-        all_actions = [self.action_space.sample() for _ in range(self.env.n_agents)]
-        all_actions[self.agent_index] = action
-        obs_list, rewards, term, trunc, info = self.env.step(all_actions)
-        return obs_list[self.agent_index], rewards[self.agent_index], term, trunc, info
