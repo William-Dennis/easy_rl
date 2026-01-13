@@ -5,7 +5,7 @@ Verifies that agents can be initialized, act, and saved/loaded using the shared 
 
 import torch
 from easy_marl.src.core.agents import PPOAgent
-from tests.mock_env import SingleAgentWrapper
+from easy_marl.examples.mock_env import SingleAgentWrapper
 
 # Note: mock_env and single_agent_env fixtures are automatically available from conftest.py
 

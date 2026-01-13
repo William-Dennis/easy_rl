@@ -11,7 +11,7 @@ import gymnasium as gym
 
 from easy_marl.src.core.agents import PPOAgent, BaseAgent
 from easy_marl.src.core.training import sequential_train, parallel_train
-from tests.mock_env import SimpleCoordinationEnv, SingleAgentWrapper
+from easy_marl.examples.mock_env import SimpleCoordinationEnv, SingleAgentWrapper
 
 
 def _make_factory_env(idx: int, agents_list: List[BaseAgent], seed: int) -> gym.Env:
