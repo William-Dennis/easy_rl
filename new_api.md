@@ -1,31 +1,93 @@
-# New API Structure: Decoupled MARL Framework
+# Easy MARL Refactoring Plan: Decoupled Framework
 
-This document outlines the proposed organization of the `easy_marl` package after decoupling the core reinforcement learning logic from the specific electricity market application.
+This document outlines the detailed plan to refactor the `easy_marl` package. The goal is to separate the core Multi-Agent Reinforcement Learning (MARL) logic from the specific Electricity Market application, creating a truly reusable "publication ready" framework.
 
-## Core Framework (`easy_marl/src/core`)
+## Critique of Previous Architecture
 
-The core contains generic, environment-agnostic MARL components.
+The prior codebase had significant structural issues preventing it from being a generic framework:
 
-- **`agents.py`**: Contains `BaseAgent` and `PPOAgent`. These classes handle policy inference and training logic without assuming anything about the environment's domain.
-- **`training.py`**: Implements the multi-round training loops (`sequential_train`, `parallel_train`, `auto_train`). It operates on any Gymnasium-compatible environment.
-- **`base_env.py`**: Provides `BaseMARLEnv`, an abstract base class for multi-agent environments, standardizing how agents interact with the simulation.
+- **Circular Dependencies**: Core `src` components imported from `examples`, which is an architectural violation.
+- **Tight Coupling**: Training loops mixed generic SBR/IBR logic with domain-specific evaluation metrics (electricity prices).
+- **Missing Abstractions**: Lack of a strong `BaseMARLEnv` contract.
+- **Test Coverage**: Tests relied on the electricity environment, preventing independent verification of the core.
 
-## Environment Library (`easy_marl/src/envs`)
+## Proposed Directory Structure
 
-Specific simulations are grouped into sub-packages.
+```
+easy_marl/
+├── src/
+│   ├── core/               # Generic MARL components (Environment Agnostic)
+│   │   ├── __init__.py
+│   │   ├── agents.py       # BaseAgent, PPOAgent (Clean dependencies)
+│   │   ├── base_env.py     # BaseMARLEnv (Abstract Base Class)
+│   │   └── training.py     # sequential_train, parallel_train (Generic)
+│   ├── envs/               # Domain-specific Environments
+│   │   ├── __init__.py
+│   │   └── electricity/    # Electricity Market Domain
+│   │       ├── __init__.py
+│   │       ├── market_env.py   # MARLElectricityMarketEnv
+│   │       ├── market_logic.py # Performance critical logic (was in examples)
+│   │       └── observators.py  # specific feature engineering
+│   └── utils/
+│       └── serialization.py # Helper for agent saving/loading
+├── examples/
+│   └── bidding/            # Usage example
+│       ├── main.py         # Entry point
+│       └── configs.py      # Specific parameter generation
+└── tests/                  # Updated tests
+```
 
-### Electricity Market (`easy_marl/src/envs/electricity`)
+## Migration Phases
 
-- **`market_env.py`**: The `MARLElectricityMarketEnv` implementation, focusing on the bidding simulation logic.
-- **`market_logic.py`**: Performance-critical market clearing functions (using Numba).
-- **`observators.py`**: Domain-specific observation builders (feature engineering) for electricity market data.
+### Phase 1: Core Foundation & Generic Tests
 
-## Example Workflows (`easy_marl/examples`)
+Focus: Build the `core` module and verify it with generic tests before moving complex domain logic.
 
-- **`bidding/`**: A high-level example showing how to initialize the electricity environment and run the core training routines.
+1. **`easy_marl/src/core/base_env.py`**
+    - Define `BaseMARLEnv(gym.Env)` abstract base class.
+    - Enforce contracts for `n_agents`, `reset()`, and `step()`.
 
-## Benefits
+2. **`easy_marl/src/core/agents.py`**
+    - Move `BaseAgent` and `PPOAgent` here.
+    - Remove all electricity-specific references.
 
-- **Extensibility**: Easily add new environments (e.g., traffic control, supply chain) by implementing a new sub-package in `envs/`.
-- **Maintainability**: Core RL logic is isolated from simulation-specific physics/rules.
-- **Testability**: The core can be tested using simple mock environments.
+3. **`tests/unit_tests/test_core_training.py`**
+    - Implement a `SimpleMockEnv` (e.g., a simple coordination game).
+    - Verify `sequential_train` and `parallel_train` work with this mock environment.
+    - validates the core training loop is truly generic.
+
+### Phase 2: Refactoring Training Logic
+
+Focus: Decouple the training loops from domain-specific metrics.
+
+1. **Generic Training Loop (`src/core/training.py`)**
+    - Port `sequential_train` and `parallel_train` logic.
+    - Remove `make_competitive_params` dependency (use generic env factories).
+    - Generalized evaluation: Replace hardcoded `market_prices` tracking with generic reward/metric callbacks.
+
+### Phase 3: Migrating Electricity Market
+
+Focus: Re-integrate the electricity market as a sub-package `easy_marl.envs.electricity`.
+
+1. **`easy_marl/src/envs/electricity/`**
+    - Move `market_logic.py` (numba logic) here from examples.
+    - Move `MARLElectricityMarketEnv` here, inheriting from `BaseMARLEnv`.
+    - Move `observators.py` here.
+
+2. **Update Examples**
+    - Refactor `examples/bidding/` to import from the new `core` and `envs.electricity` locations.
+
+## Verification Plan
+
+### Automated Tests
+
+1. **Core Verification**: `pytest tests/unit_tests/test_core_training.py`
+    - Must pass using only the generic mock environment.
+2. **Regression Verification**: `pytest tests/unit_tests/test_agents.py`
+    - Verify PPO agents still function correctly after move.
+3. **End-to-End**: Run `python examples/bidding/main.py`
+    - Verify the electricity market example runs without error using the new structure.
+
+### Manual Verification
+
+- **Code Review**: Ensure `src/core` contains ZERO imports from `src/envs` or `examples`.
