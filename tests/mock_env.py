@@ -19,8 +19,10 @@ class SimpleCoordinationEnv(BaseMARLEnv):
     - Reward: Penalize variance (coordination) and magnitude.
     """
 
-    def __init__(self, n_agents=2):
+    def __init__(self, n_agents=2, agents=None, seed=None):
+        super().__init__()
         self._n_agents = n_agents
+        self.agents = agents  # Store agents if provided
         self.observation_space = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
         self.action_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
 
